@@ -5,3 +5,7 @@ A lo largo del curso, evolucionaremos la forma de desplegar la aplicación ocupa
 ## [Taller 1](./01/README.md)
 
 Desplegando Mythical Mysfits en un servidor EC2
+
+## [Taler 2](./02/README.md)
+
+Desplegando la API de Mythical Mysfits usando Auto Scaling Groups
