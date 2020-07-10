@@ -11,32 +11,33 @@ Mappings:
       "AmiId": "ami-0e34e7b9ca0ace12d"
 
 Resources:
+
   LoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: MythicalMysfitsLB
       GroupDescription: Load Balancer
-      # Ingress rules
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
-        
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+          
   InstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: MythicalMysfitsInstance
       GroupDescription: Instances
-      # Ingress rules
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 8000
-        ToPort: 8000
-        #SourceSecurityGroupId: !GetAtt LoadBalancerSG.GroupId
-        SourceSecurityGroupName: !Ref LoadBalancerSG
-        
-      
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+        - SourceSecurityGroupId: !GetAtt LoadBalancerSG.GroupId
+          FromPort: 8000
+          ToPort: 8000
+          IpProtocol: tcp
+          
   LoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
@@ -44,12 +45,18 @@ Resources:
       SecurityGroups:
         - !GetAtt LoadBalancerSG.GroupId
       AvailabilityZones: !GetAZs
-      # Listeners
-      Listeners: 
-        - Listeners
-      # HealthCheck
-      HealthCheck: 
-        HealthCheck
+      Listeners:
+      - InstancePort: 8000
+        InstanceProtocol: TCP
+        LoadBalancerPort: 80
+        Protocol: TCP
+      HealthCheck:
+        HealthyThreshold: 2
+        Interval: 30
+        Target: "TCP:8000"
+        Timeout: 5
+        UnhealthyThreshold: 5
+
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -61,5 +68,31 @@ Resources:
       KeyName: mythical-mysfits
       SecurityGroups:
         - !GetAtt InstanceSG.GroupId
-      # UserData
-  # AutoScalingGroup:
+      UserData: 
+        Fn::Base64: |
+          #!/bin/bash -xe
+          exec > >(tee /var/log/cloud-init-output.log|logger -t user-data -s 2>/dev/console) 2>&1
+          cd /home/ec2-user
+          sudo yum install -y python37
+          curl -O https://bootstrap.pypa.io/get-pip.py
+          python3 get-pip.py
+          sudo yum install git -y
+          git clone https://github.com/rgoguerra/bootcamp-module-devops.git	
+          cd bootcamp-module-devops/backend/
+          pip install -r requirements.txt
+          nohup gunicorn -w 3 -b 0.0.0.0:8000 app:app &
+      
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones: !GetAZs
+      DesiredCapacity: 1
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      LoadBalancerNames:
+        - !Ref LoadBalancer
+      MaxSize: 2
+      MinSize: 1
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: True
+          Value: Mysfits
