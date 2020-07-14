@@ -9,11 +9,3 @@ A lo largo del curso, evolucionaremos la forma de desplegar la aplicación ocupa
 3. [Taller 3](./03/README.md): Desplegando la API usando CloudFormation y Auto Scaling Groups
 
 4. [Taller 4](./04/README.md): Rolling Update de ASG usando CloudFormation.
-
-## [Taler 3](./03/README.md)
-
-Desplegando la API usando CloudFormation y Auto Scaling Groups
-
-## [Taler 4](./04/README.md)
-
-Rolling Update de ASG usando CloudFormation.
